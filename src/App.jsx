@@ -110,6 +110,51 @@ const App = () => {
     fix: `{/* Adding key={contact.id} forces a full remount on every contact switch */}
 <ChatWindow key={contact.id} contact={contact} />`,
     fixLabel: "key={contact.id} ensures a fresh ChatWindow — and a fresh draft — for every contact.",
+    alternatives: [
+      {
+        title: "Lift state up",
+        verdict: "valid",
+        code: `const App = () => {
+  const [active, setActive] = useState("alice");
+  const [drafts, setDrafts] = useState({});
+  const contact = contacts.find(c => c.id === active);
+
+  return (
+    <ChatWindow
+      contact={contact}
+      draft={drafts[active] || ""}
+      onDraftChange={text =>
+        setDrafts(prev => ({ ...prev, [active]: text }))
+      }
+    />
+  );
+};`,
+        tradeoffs: "Preserves drafts per contact — a feature, not just a fix. But it couples the parent to ChatWindow's internal state. As ChatWindow grows (attachments, reply-to, etc.), the parent becomes a state dumping ground.",
+      },
+      {
+        title: "useEffect reset",
+        verdict: "valid",
+        code: `const ChatWindow = ({ contact }) => {
+  const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    setDraft("");
+  }, [contact.id]);
+
+  return <input value={draft} onChange={e => setDraft(e.target.value)} />;
+};`,
+        tradeoffs: "Works without remounting, but setState inside useEffect means a render-then-clear cycle (brief flicker). You also have to remember to reset every piece of local state manually — easy to miss when someone adds new state later.",
+      },
+      {
+        title: "React.memo",
+        verdict: "trap",
+        code: `const ChatWindow = React.memo(({ contact }) => {
+  const [draft, setDraft] = useState("");
+  return <input value={draft} onChange={e => setDraft(e.target.value)} />;
+});`,
+        tradeoffs: "Doesn't help. memo controls whether a component re-renders when props are the same — but here props do change (different contact). The bug is stale state carrying over, not unnecessary re-renders. memo solves a different problem entirely.",
+      },
+    ],
     logSequence: null,
   },
   {
@@ -471,6 +516,27 @@ function TestPanel({ test }) {
               <CodeBlock code={test.fix} />
             </div>
           )}
+
+          {test.alternatives && (
+            <div style={{ marginTop: 18 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#64748b", margin: "0 0 14px" }}>Other approaches</p>
+              {test.alternatives.map((alt, i) => {
+                const isTrap = alt.verdict === "trap";
+                return (
+                  <div key={i} style={{ border: `2px solid ${isTrap ? "#fca5a5" : "#cbd5e1"}`, borderRadius: 12, padding: "16px 18px", marginBottom: 14, background: isTrap ? "#fef2f2" : "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: isTrap ? "#b91c1c" : "#1e293b" }}>{alt.title}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 20, background: isTrap ? "#fee2e2" : "#dcfce7", color: isTrap ? "#b91c1c" : "#15803d", border: `1.5px solid ${isTrap ? "#fca5a5" : "#86efac"}` }}>
+                        {isTrap ? "✗ doesn't help" : "✓ valid"}
+                      </span>
+                    </div>
+                    <CodeBlock code={alt.code} />
+                    <p style={{ fontSize: 14, color: isTrap ? "#991b1b" : "#475569", margin: "12px 0 0", lineHeight: 1.7 }}>{alt.tradeoffs}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -482,7 +548,7 @@ export default function App() {
   const test = TESTS.find(t => t.id === active);
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "2rem 1.25rem" }}>
-      <h1 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 700, color: "#0f172a" }}>React keys — interview tests</h1>
+      <h1 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 700, color: "#0f172a" }}>React — interview tests</h1>
       <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 28px", lineHeight: 1.65 }}>Read the code, interact with the demo, answer the questions, then reveal the answer.</p>
       <div style={{ display: "flex", gap: 10, marginBottom: 32 }}>
         {TESTS.filter(t => t.id === "a").map(t => (
