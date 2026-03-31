@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Highlight, themes } from "prism-react-renderer";
 
 // ─── Stable components defined at module scope ────────────────────────────────
 // IMPORTANT: never define these inside a render/component function.
@@ -259,7 +260,22 @@ function CodeBlock({ code }) {
   const [copied, setCopied] = useState(false);
   return (
     <div style={{ position: "relative" }}>
-      <pre style={{ background: "#1e1e2e", borderRadius: 12, padding: "16px 18px", fontSize: 13.5, fontFamily: "monospace", overflowX: "auto", margin: 0, lineHeight: 1.75, color: "#cdd6f4", whiteSpace: "pre" }}>{code}</pre>
+      <Highlight theme={themes.nightOwl} code={code.trim()} language="jsx">
+        {({ style, tokens, getLineProps, getTokenProps }) => (
+          <pre style={{ ...style, borderRadius: 12, padding: "16px 18px", fontSize: 13.5, fontFamily: "'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace", overflowX: "auto", margin: 0, lineHeight: 1.75 }}>
+            {tokens.map((line, i) => (
+              <div key={i} {...getLineProps({ line })} style={{ display: "flex" }}>
+                <span style={{ display: "inline-block", width: 36, textAlign: "right", paddingRight: 16, color: "#546e7a", fontSize: 12, userSelect: "none", flexShrink: 0 }}>{i + 1}</span>
+                <span>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </span>
+              </div>
+            ))}
+          </pre>
+        )}
+      </Highlight>
       <div style={{ position: "absolute", top: 10, right: 10 }}>
         <BTN size="sm" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>{copied ? "✓ copied" : "copy"}</BTN>
       </div>
@@ -402,15 +418,15 @@ function TestPanel({ test }) {
         <Badge label={test.difficulty} color={test.diffColor} />
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <Step n={1} label="Read the code" />
-        <CodeBlock code={test.code} />
-      </div>
-
       <div style={{ border: "2px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginBottom: 24, background: "#fff" }}>
-        <Step n={2} label="Interact with the demo" />
+        <Step n={1} label="Interact with the demo" />
         <p style={{ fontSize: 16, color: "#475569", margin: "0 0 16px", lineHeight: 1.7 }}>{test.question}</p>
         <Demo />
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <Step n={2} label="Read the code" />
+        <CodeBlock code={test.code} />
       </div>
 
       <div style={{ border: "2px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginBottom: 24, background: "#fff" }}>
@@ -469,7 +485,7 @@ export default function App() {
       <h1 style={{ margin: "0 0 8px", fontSize: 26, fontWeight: 700, color: "#0f172a" }}>React keys — interview tests</h1>
       <p style={{ fontSize: 16, color: "#64748b", margin: "0 0 28px", lineHeight: 1.65 }}>Read the code, interact with the demo, answer the questions, then reveal the answer.</p>
       <div style={{ display: "flex", gap: 10, marginBottom: 32 }}>
-        {TESTS.map(t => (
+        {TESTS.filter(t => t.id === "a").map(t => (
           <BTN key={t.id} onClick={() => setActive(t.id)} variant={active === t.id ? "tab_active" : "tab_inactive"} size="md">{t.tab}</BTN>
         ))}
       </div>
